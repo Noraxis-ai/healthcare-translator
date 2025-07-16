@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Healthcare Translator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Healthcare Translator</h1>
+
+    <div class="lang-select">
+      <label for="inputLang">Input Language:</label>
+      <select id="inputLang"></select>
+
+      <label for="outputLang">Translate To:</label>
+      <select id="outputLang"></select>
+    </div>
+
+    <button id="startRecording">🎙 Start Speaking</button>
+
+    <div class="transcripts">
+      <h3>Original:</h3>
+      <p id="originalText">...</p>
+
+      <h3>Translated:</h3>
+      <p id="translatedText">...</p>
+    </div>
+
+    <button id="speakTranslation">🔊 Read Translation</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
