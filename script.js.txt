@@ -12,14 +12,6 @@ const LANGUAGES = [
   { code: "ja-JP", name: "Japanese", outputCode: "ja" }
 ];
 
-const API_CONFIG = {
-  url: "https://api.openai.com/v1/chat/completions",
-  model: "gpt-4",
-  temperature: 0.4,
-  // Move API key to environment variable or secure config
-  apiKey:"Bearer ${OPENAI_API_KEY}"
-};
-
 // DOM Elements - cached for performance
 const elements = {
   inputSelect: null,
@@ -58,7 +50,7 @@ function checkBrowserSupport() {
     showError("Speech recognition is not supported in this browser.");
     elements.startBtn.disabled = true;
   }
-  
+
   if (!window.speechSynthesis) {
     showError("Speech synthesis is not supported in this browser.");
     elements.speakBtn.disabled = true;
@@ -72,16 +64,13 @@ function populateLanguageSelects() {
     return;
   }
 
-  // Use DocumentFragment for better performance
   const inputFragment = document.createDocumentFragment();
   const outputFragment = document.createDocumentFragment();
 
   LANGUAGES.forEach(lang => {
-    // Input language option
     const inputOption = createOption(lang.code, lang.name);
     inputFragment.appendChild(inputOption);
 
-    // Output language option
     const outputOption = createOption(lang.outputCode, lang.name);
     outputFragment.appendChild(outputOption);
   });
@@ -117,7 +106,7 @@ function handleRecordingToggle() {
 function startRecording() {
   try {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    
+
     recognition.lang = elements.inputSelect.value;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -154,10 +143,9 @@ async function handleSpeechResult(event) {
   try {
     const transcript = event.results[0][0].transcript;
     elements.originalText.textContent = transcript;
-    
-    // Show loading state
+
     elements.translatedText.textContent = "Translating...";
-    
+
     const translated = await translateText(transcript);
     elements.translatedText.textContent = translated;
   } catch (error) {
@@ -170,7 +158,7 @@ async function handleSpeechResult(event) {
 // Handle speech recognition errors
 function handleSpeechError(event) {
   console.error("Speech recognition error:", event.error);
-  
+
   let errorMessage = "Speech recognition failed. ";
   switch (event.error) {
     case 'no-speech':
@@ -185,7 +173,7 @@ function handleSpeechError(event) {
     default:
       errorMessage += "Please try again.";
   }
-  
+
   showError(errorMessage);
 }
 
@@ -195,7 +183,7 @@ function updateRecordingUI(recording) {
   elements.startBtn.disabled = false;
 }
 
-// Translate text using OpenAI API
+// Translate text using your backend API
 async function translateText(inputText) {
   if (!inputText.trim()) {
     throw new Error("No text to translate");
@@ -203,31 +191,18 @@ async function translateText(inputText) {
 
   const outputLang = elements.outputSelect.value;
   const languageName = LANGUAGES.find(lang => lang.outputCode === outputLang)?.name || outputLang;
-  
-  const requestBody = {
-    model: API_CONFIG.model,
-    messages: [
-      { 
-        role: "system", 
-        content: "You are a professional medical translator. Provide accurate, contextually appropriate translations for medical terminology and phrases." 
-      },
-      { 
-        role: "user", 
-        content: `Translate this medical phrase to ${languageName}: "${inputText}"` 
-      }
-    ],
-    temperature: API_CONFIG.temperature,
-    max_tokens: 150
-  };
 
   try {
-    const response = await fetch(API_CONFIG.url, {
+    const response = await fetch("/api/translate", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_CONFIG.apiKey}`
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        inputText,
+        outputLang,
+        languageName
+      })
     });
 
     if (!response.ok) {
@@ -235,12 +210,7 @@ async function translateText(inputText) {
     }
 
     const data = await response.json();
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Invalid API response format");
-    }
-
-    return data.choices[0].message.content.trim();
+    return data.translation;
   } catch (error) {
     console.error("Translation API error:", error);
     throw new Error("Translation service unavailable. Please try again.");
@@ -250,25 +220,24 @@ async function translateText(inputText) {
 // Handle text-to-speech
 function handleSpeakTranslation() {
   const text = elements.translatedText.textContent;
-  
+
   if (!text || text === "Translation failed" || text === "Translating...") {
     showError("No translation available to speak.");
     return;
   }
 
   try {
-    // Cancel any ongoing speech
     speechSynthesis.cancel();
-    
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = elements.outputSelect.value;
-    utterance.rate = 0.8; // Slightly slower for better comprehension
-    
+    utterance.rate = 0.8;
+
     utterance.onerror = (event) => {
       console.error("Speech synthesis error:", event.error);
       showError("Speech synthesis failed. Please try again.");
     };
-    
+
     speechSynthesis.speak(utterance);
   } catch (error) {
     console.error("Speech synthesis error:", error);
@@ -278,7 +247,6 @@ function handleSpeakTranslation() {
 
 // Show error messages
 function showError(message) {
-  // You can customize this to show errors in your preferred way
   console.error(message);
   alert(message);
 }
