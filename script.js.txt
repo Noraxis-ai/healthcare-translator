@@ -1,0 +1,287 @@
+// Constants
+const LANGUAGES = [
+  { code: "en-US", name: "English (US)", outputCode: "en" },
+  { code: "es-ES", name: "Español (Spain)", outputCode: "es" },
+  { code: "fr-FR", name: "Français", outputCode: "fr" },
+  { code: "ht-HT", name: "Kreyòl Ayisyen", outputCode: "ht" },
+  { code: "pt-BR", name: "Português (Brasil)", outputCode: "pt" },
+  { code: "ar-SA", name: "Arabic", outputCode: "ar" },
+  { code: "ru-RU", name: "Russian", outputCode: "ru" },
+  { code: "zh-CN", name: "Chinese (Mandarin)", outputCode: "zh" },
+  { code: "de-DE", name: "German", outputCode: "de" },
+  { code: "ja-JP", name: "Japanese", outputCode: "ja" }
+];
+
+const API_CONFIG = {
+  url: "https://api.openai.com/v1/chat/completions",
+  model: "gpt-4",
+  temperature: 0.4,
+  // Move API key to environment variable or secure config
+  apiKey: "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"
+};
+
+// DOM Elements - cached for performance
+const elements = {
+  inputSelect: null,
+  outputSelect: null,
+  startBtn: null,
+  originalText: null,
+  translatedText: null,
+  speakBtn: null
+};
+
+// State management
+let recognition = null;
+let isRecording = false;
+
+// Initialize the application
+function init() {
+  cacheElements();
+  populateLanguageSelects();
+  attachEventListeners();
+  checkBrowserSupport();
+}
+
+// Cache DOM elements
+function cacheElements() {
+  elements.inputSelect = document.getElementById("inputLang");
+  elements.outputSelect = document.getElementById("outputLang");
+  elements.startBtn = document.getElementById("startRecording");
+  elements.originalText = document.getElementById("originalText");
+  elements.translatedText = document.getElementById("translatedText");
+  elements.speakBtn = document.getElementById("speakTranslation");
+}
+
+// Check browser support
+function checkBrowserSupport() {
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+    showError("Speech recognition is not supported in this browser.");
+    elements.startBtn.disabled = true;
+  }
+  
+  if (!window.speechSynthesis) {
+    showError("Speech synthesis is not supported in this browser.");
+    elements.speakBtn.disabled = true;
+  }
+}
+
+// Populate language select dropdowns
+function populateLanguageSelects() {
+  if (!elements.inputSelect || !elements.outputSelect) {
+    console.error("Language select elements not found");
+    return;
+  }
+
+  // Use DocumentFragment for better performance
+  const inputFragment = document.createDocumentFragment();
+  const outputFragment = document.createDocumentFragment();
+
+  LANGUAGES.forEach(lang => {
+    // Input language option
+    const inputOption = createOption(lang.code, lang.name);
+    inputFragment.appendChild(inputOption);
+
+    // Output language option
+    const outputOption = createOption(lang.outputCode, lang.name);
+    outputFragment.appendChild(outputOption);
+  });
+
+  elements.inputSelect.appendChild(inputFragment);
+  elements.outputSelect.appendChild(outputFragment);
+}
+
+// Helper function to create option elements
+function createOption(value, text) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = text;
+  return option;
+}
+
+// Attach event listeners
+function attachEventListeners() {
+  elements.startBtn?.addEventListener("click", handleRecordingToggle);
+  elements.speakBtn?.addEventListener("click", handleSpeakTranslation);
+}
+
+// Handle recording toggle
+function handleRecordingToggle() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+// Start speech recognition
+function startRecording() {
+  try {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    
+    recognition.lang = elements.inputSelect.value;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      updateRecordingUI(true);
+    };
+
+    recognition.onresult = handleSpeechResult;
+    recognition.onerror = handleSpeechError;
+    recognition.onend = () => {
+      isRecording = false;
+      updateRecordingUI(false);
+    };
+
+    recognition.start();
+  } catch (error) {
+    console.error("Failed to start speech recognition:", error);
+    showError("Failed to start speech recognition. Please try again.");
+  }
+}
+
+// Stop speech recognition
+function stopRecording() {
+  if (recognition) {
+    recognition.stop();
+  }
+}
+
+// Handle speech recognition result
+async function handleSpeechResult(event) {
+  try {
+    const transcript = event.results[0][0].transcript;
+    elements.originalText.textContent = transcript;
+    
+    // Show loading state
+    elements.translatedText.textContent = "Translating...";
+    
+    const translated = await translateText(transcript);
+    elements.translatedText.textContent = translated;
+  } catch (error) {
+    console.error("Translation error:", error);
+    showError("Translation failed. Please try again.");
+    elements.translatedText.textContent = "Translation failed";
+  }
+}
+
+// Handle speech recognition errors
+function handleSpeechError(event) {
+  console.error("Speech recognition error:", event.error);
+  
+  let errorMessage = "Speech recognition failed. ";
+  switch (event.error) {
+    case 'no-speech':
+      errorMessage += "No speech detected. Please try again.";
+      break;
+    case 'network':
+      errorMessage += "Network error. Check your connection.";
+      break;
+    case 'not-allowed':
+      errorMessage += "Microphone access denied.";
+      break;
+    default:
+      errorMessage += "Please try again.";
+  }
+  
+  showError(errorMessage);
+}
+
+// Update recording UI
+function updateRecordingUI(recording) {
+  elements.startBtn.textContent = recording ? "Stop Recording" : "Start Recording";
+  elements.startBtn.disabled = false;
+}
+
+// Translate text using OpenAI API
+async function translateText(inputText) {
+  if (!inputText.trim()) {
+    throw new Error("No text to translate");
+  }
+
+  const outputLang = elements.outputSelect.value;
+  const languageName = LANGUAGES.find(lang => lang.outputCode === outputLang)?.name || outputLang;
+  
+  const requestBody = {
+    model: API_CONFIG.model,
+    messages: [
+      { 
+        role: "system", 
+        content: "You are a professional medical translator. Provide accurate, contextually appropriate translations for medical terminology and phrases." 
+      },
+      { 
+        role: "user", 
+        content: `Translate this medical phrase to ${languageName}: "${inputText}"` 
+      }
+    ],
+    temperature: API_CONFIG.temperature,
+    max_tokens: 150
+  };
+
+  try {
+    const response = await fetch(API_CONFIG.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_CONFIG.apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Invalid API response format");
+    }
+
+    return data.choices[0].message.content.trim();
+  } catch (error) {
+    console.error("Translation API error:", error);
+    throw new Error("Translation service unavailable. Please try again.");
+  }
+}
+
+// Handle text-to-speech
+function handleSpeakTranslation() {
+  const text = elements.translatedText.textContent;
+  
+  if (!text || text === "Translation failed" || text === "Translating...") {
+    showError("No translation available to speak.");
+    return;
+  }
+
+  try {
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = elements.outputSelect.value;
+    utterance.rate = 0.8; // Slightly slower for better comprehension
+    
+    utterance.onerror = (event) => {
+      console.error("Speech synthesis error:", event.error);
+      showError("Speech synthesis failed. Please try again.");
+    };
+    
+    speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error("Speech synthesis error:", error);
+    showError("Speech synthesis failed. Please try again.");
+  }
+}
+
+// Show error messages
+function showError(message) {
+  // You can customize this to show errors in your preferred way
+  console.error(message);
+  alert(message);
+}
+
+// Initialize the application when DOM is ready
+document.addEventListener('DOMContentLoaded', init);
