@@ -28,9 +28,9 @@ A real-time multilingual translator designed for healthcare professionals and pa
 
 ## 🧪 Getting Started Locally
 
-To run the app locally:
+To run the app locally: 
 
-1. **Clone the repository**
+1. **https://github.com/Noraxis-ai/healthcare-translator/tree/main**
 
 
 git clone https://github.com/your-username/healthcare-translator.git
@@ -40,7 +40,7 @@ Use the .env.example file as a guide and add your OpenAI key:
 
 OPENAI_API_KEY=your_openai_key_here
 
-🔐 **API Key Security**
+## 🔐 **API Key Security**
 This project uses the OpenAI GPT-4 API.
 
 ➡️ The actual API key has been removed from the codebase for security.
@@ -48,24 +48,21 @@ This project uses the OpenAI GPT-4 API.
 ➡️ Developers can use the .env.example file to configure their own key for local use.
 
 
-🌐 Live Demo
+## 🌐 Live Demo
 🧪 Try the live app here:
 👉 https://your-vercel-project-url.vercel.app
 
-📂 Project Structure
-bash
-Copier
-Modifier
+## 📂 Project Structure
+
 📦 healthcare-translator/
 ├── index.html          # Main HTML interface
 ├── style.css           # App styling
 ├── script.js           # Core JavaScript logic
 ├── .env.example        # Example of required environment variables
 └── README.md           # Project documentation
-📸 Screenshots
-(You can add a screenshot here if you wish)
 
-🧠 About the Project
+
+## 🧠 About the Project
 This app was created as a part of a technical evaluation for Nao Medical.
 It demonstrates:
 
