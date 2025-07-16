@@ -17,7 +17,7 @@ const API_CONFIG = {
   model: "gpt-4",
   temperature: 0.4,
   // Move API key to environment variable or secure config
-  apiKey: apiKey: process.env.OPENAI_API_KEY
+  apiKey:"Bearer ${OPENAI_API_KEY}"
 };
 
 // DOM Elements - cached for performance
