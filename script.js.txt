@@ -17,7 +17,7 @@ const API_CONFIG = {
   model: "gpt-4",
   temperature: 0.4,
   // Move API key to environment variable or secure config
-  apiKey: "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"
+  apiKey: apiKey: process.env.OPENAI_API_KEY
 };
 
 // DOM Elements - cached for performance
