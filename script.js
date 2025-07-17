@@ -398,3 +398,5 @@ function showTranslationLoading(show) {
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
 
+// Trigger Vercel deployment after updating environment variables
+
